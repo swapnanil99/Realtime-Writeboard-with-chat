@@ -23,9 +23,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-+4us6o0c3otu(1t1n%+6vzf=yu&jxlw=p(go9x*f%h^9))$2tm'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["realtime-writeboard-with-chat-1.onrender.com"]
 
 
 # Application definition
