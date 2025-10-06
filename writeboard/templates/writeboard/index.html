@@ -103,7 +103,10 @@ document.addEventListener("DOMContentLoaded", ()=>{
   const ctx=canvas.getContext("2d");
   const chatInput=document.getElementById("chatInput");
 
-  const socket=new WebSocket("ws://"+window.location.host+"/ws/whiteboard/");
+ const socket = new WebSocket(
+    (window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.host + "/ws/whiteboard/"
+);
+
 
   socket.onmessage=(e)=>{
     const data=JSON.parse(e.data);
