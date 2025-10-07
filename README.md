@@ -4,6 +4,7 @@ A **real-time writeboard with chat application** built using **Django**, **Djang
 It allows users to send and receive messages instantly without refreshing the page.  
 This project demonstrates the power of **asynchronous communication** in Django.
 
+🚀 **Live Demo:** [Click here to try it!](https://realtime-writeboard-with-chat.onrender.com)
 ---
 
 ## 🚀 Features
