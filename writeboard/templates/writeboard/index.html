@@ -3,47 +3,49 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Realtime Whiteboard + Chat (Undo/Redo)</title>
+<title>Simple Whiteboard + Chat + Undo/Redo</title>
 <style>
   body, html {
     margin: 0; padding: 0;
     font-family: Arial, sans-serif;
     background: #f0f4f8;
     height: 100%;
-    overflow: hidden;
   }
 
-  /* Modal */
-  #modal {
-    position: fixed; top:0; left:0;
-    width:100%; height:100%;
-    background: rgba(0,0,0,0.6);
-    display:flex; justify-content:center; align-items:center;
-    z-index:10;
+  #main {
+    display: flex;
+    flex-direction: row;
+    height: 100vh;
+    padding: 10px;
+    box-sizing: border-box;
   }
-  #modalContent {
-    background:#fff; padding:20px; border-radius:12px;
-    text-align:center; width:90%; max-width:320px;
-  }
-  #avatarSelection span {
-    font-size:32px; margin:5px; cursor:pointer;
-    border:2px solid transparent; border-radius:6px; padding:5px;
-    transition: all 0.2s;
-  }
-  #avatarSelection span:hover { transform: scale(1.2); }
-  #avatarSelection span.selected { border-color:#007bff; }
 
-  /* Layout */
-  #main { display:none; flex-direction:row; padding:10px; height:100vh; box-sizing:border-box; }
-  #canvasContainer { flex:3; display:flex; flex-direction:column; align-items:center; }
-  canvas { border:2px solid #222; cursor:crosshair; background:#fff; border-radius:8px; width:100%; height:auto; max-width:800px; }
+  #canvasContainer {
+    flex: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
 
   #controls {
-    margin-bottom:10px; display:flex; flex-wrap:wrap; gap:10px;
-    align-items:center; justify-content:center;
+    margin-bottom: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
   }
 
-  /* ✅ Fixed Chat Styles */
+  canvas {
+    border: 2px solid #222;
+    border-radius: 8px;
+    background: #fff;
+    touch-action: none;
+    width: 100%;
+    max-width: 800px;
+    height: 500px;
+  }
+
   #chatContainer {
     flex: 1;
     display: flex;
@@ -52,252 +54,221 @@
     background: #fff;
     border: 2px solid #222;
     border-radius: 10px;
-    height: 100%;
-    overflow: hidden;
-    position: relative;
   }
+
   #chatMessages {
     flex: 1;
     overflow-y: auto;
     padding: 10px;
-    box-sizing: border-box;
   }
-  .chatMessage { display:flex; align-items:center; margin-bottom:5px; background:#e0e7ff; border-radius:12px; padding:5px 10px; word-wrap:break-word; }
-  .chatMessage span.avatar { font-size:24px; margin-right:8px; }
+
+  .chatMessage {
+    background: #e0e7ff;
+    border-radius: 12px;
+    margin-bottom: 5px;
+    padding: 6px 10px;
+    word-wrap: break-word;
+  }
 
   #chatInputContainer {
     display: flex;
     padding: 10px;
     border-top: 1px solid #ccc;
     background: #fff;
-    flex-shrink: 0;
-    position: sticky;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 5;
   }
+
   #chatInput {
-    flex:1; padding:8px 10px; border-radius:6px;
-    border:1px solid #ccc; font-size:16px;
+    flex: 1;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
   }
+
   #sendChat {
-    padding:8px 16px; margin-left:5px; border:none;
-    background:#007bff; color:white; border-radius:6px; cursor:pointer;
-    font-size:16px;
+    margin-left: 8px;
+    padding: 8px 14px;
+    background: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  button {
+    padding: 8px 12px;
+    border: none;
+    background: #007bff;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background: #0056b3;
+  }
+
+  input[type="color"],
+  input[type="range"] {
+    cursor: pointer;
   }
 
   @media (max-width:768px) {
-    #main { flex-direction:column; padding:5px; }
-    #canvasContainer, #chatContainer { flex:unset; width:100%; margin:0; }
-    #chatContainer { height:50vh; margin-top:10px; overflow:visible; }
-    canvas { width:100%; height:auto; max-height:50vh; }
-  }
-
-  @media (max-width:480px) {
-    #controls { flex-direction:column; gap:6px; }
-    #chatInputContainer { position:sticky; bottom:0; background:#fff; z-index:5; }
+    #main { flex-direction: column; }
+    #chatContainer { margin-left: 0; margin-top: 10px; height: 40vh; }
   }
 </style>
 </head>
 <body>
 
-<!-- Modal -->
-<div id="modal">
-  <div id="modalContent">
-    <h3>Select Avatar</h3>
-    <div id="avatarSelection">
-      <span data-avatar="😀">😀</span>
-      <span data-avatar="😎">😎</span>
-      <span data-avatar="🥰">🥰</span>
-      <span data-avatar="🤖">🤖</span>
-    </div>
-    <input type="text" id="usernameInput" placeholder="Enter your name" style="margin-top:10px; width:90%;"><br><br>
-    <button id="enterRoom" style="padding:8px 16px;">Enter Room</button>
-  </div>
-</div>
-
-<!-- Main whiteboard -->
 <div id="main">
   <div id="canvasContainer">
     <div id="controls">
       <input type="color" id="colorPicker" value="#000000">
-      <input type="range" id="lineWidth" min="1" max="10" value="2">
+      <input type="range" id="lineWidth" min="1" max="20" value="3">
       <button id="eraser">Eraser</button>
       <button id="undo">Undo</button>
       <button id="redo">Redo</button>
       <button id="clear">Clear</button>
       <button id="save">Save PNG</button>
     </div>
-    <canvas id="board" width="800" height="600"></canvas>
+    <canvas id="board" width="800" height="500"></canvas>
   </div>
 
   <div id="chatContainer">
     <div id="chatMessages"></div>
     <div id="chatInputContainer">
-      <input type="text" id="chatInput" placeholder="Type a message">
+      <input type="text" id="chatInput" placeholder="Type a message...">
       <button id="sendChat">Send</button>
     </div>
   </div>
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", ()=>{
-  let drawing=false, current={}, color="#000", lineWidth=2;
-  let username="", avatar="", selectedAvatar=null;
+document.addEventListener("DOMContentLoaded", () => {
+  const canvas = document.getElementById("board");
+  const ctx = canvas.getContext("2d");
 
-  const canvas=document.getElementById("board");
-  const ctx=canvas.getContext("2d");
-
-  // Undo/Redo stacks
+  let drawing = false;
+  let color = "#000000";
+  let lineWidth = 3;
   let undoStack = [];
   let redoStack = [];
 
-  const socket = new WebSocket(
-    (window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.host + "/ws/whiteboard/"
-  );
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+      x: (clientX - rect.left) * (canvas.width / rect.width),
+      y: (clientY - rect.top) * (canvas.height / rect.height)
+    };
+  }
 
-  socket.onmessage=(e)=>{
-    const data=JSON.parse(e.data);
-    if(data.type==="draw"){
-      const w=canvas.width,h=canvas.height;
-      drawLine(data.x0*w,data.y0*h,data.x1*w,data.y1*h,false,data.color,data.lineWidth);
-    }
-    else if(data.type==="clear"){ ctx.clearRect(0,0,canvas.width,canvas.height); }
-    else if(data.type==="state"){ loadState(data.image); }
-    else if(data.type==="chat"){
-      addChat(data.avatar,data.user,data.message);
-    }
-  };
-
-  function drawLine(x0,y0,x1,y1,emit,strokeColor=color,strokeWidth=lineWidth){
+  function startDraw(e) {
+    drawing = true;
+    const pos = getPos(e);
     ctx.beginPath();
-    ctx.moveTo(x0,y0); ctx.lineTo(x1,y1);
-    ctx.strokeStyle=strokeColor; ctx.lineWidth=strokeWidth;
-    ctx.stroke(); ctx.closePath();
-    if(!emit) return;
-    const w=canvas.width,h=canvas.height;
-    socket.send(JSON.stringify({type:'draw', x0:x0/w, y0:y0/h, x1:x1/w, y1:y1/h, color:strokeColor, lineWidth:strokeWidth}));
+    ctx.moveTo(pos.x, pos.y);
+  }
+
+  function draw(e) {
+    if (!drawing) return;
+    const pos = getPos(e);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.stroke();
+  }
+
+  function endDraw() {
+    if (!drawing) return;
+    drawing = false;
+    ctx.closePath();
+    saveState();
+  }
+
+  function saveState() {
+    redoStack = [];
+    undoStack.push(canvas.toDataURL());
+    if (undoStack.length > 30) undoStack.shift();
+  }
+
+  function loadState(dataURL) {
+    const img = new Image();
+    img.onload = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+    };
+    img.src = dataURL;
   }
 
   // Mouse events
-  canvas.addEventListener("mousedown", e=>{drawing=true; current.x=e.offsetX; current.y=e.offsetY;});
-  canvas.addEventListener("mouseup", ()=>{drawing=false; saveState();});
-  canvas.addEventListener("mousemove", e=>{
-    if(!drawing) return;
-    drawLine(current.x,current.y,e.offsetX,e.offsetY,true);
-    current.x=e.offsetX; current.y=e.offsetY;
-  });
+  canvas.addEventListener("mousedown", startDraw);
+  canvas.addEventListener("mousemove", draw);
+  canvas.addEventListener("mouseup", endDraw);
+  canvas.addEventListener("mouseleave", endDraw);
 
   // Touch events
-  canvas.addEventListener("touchstart", e=>{
-    e.preventDefault();
-    const rect=canvas.getBoundingClientRect();
-    const t=e.touches[0]; current.x=t.clientX-rect.left; current.y=t.clientY-rect.top; drawing=true;
-  });
-  function getTouchPos(canvas, touchEvent) {
-  const rect = canvas.getBoundingClientRect();
-  return {
-    x: (touchEvent.touches[0].clientX - rect.left) * (canvas.width / rect.width),
-    y: (touchEvent.touches[0].clientY - rect.top) * (canvas.height / rect.height)
-  };
-}
-
-canvas.addEventListener("touchmove", (e) => {
-  e.preventDefault();
-  const pos = getTouchPos(canvas, e);
-  ctx.lineTo(pos.x, pos.y);
-  ctx.stroke();
-});
-
-  canvas.addEventListener("touchend", ()=>{drawing=false; saveState();});
+  canvas.addEventListener("touchstart", startDraw);
+  canvas.addEventListener("touchmove", draw);
+  canvas.addEventListener("touchend", endDraw);
 
   // Controls
-  document.getElementById("colorPicker").onchange = e=>color=e.target.value;
-  document.getElementById("lineWidth").oninput = e=>lineWidth=e.target.value;
-  document.getElementById("eraser").onclick = ()=>color="#fff";
-
-  document.getElementById("clear").onclick = ()=>{
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    socket.send(JSON.stringify({type:'clear'}));
+  document.getElementById("colorPicker").oninput = e => color = e.target.value;
+  document.getElementById("lineWidth").oninput = e => lineWidth = e.target.value;
+  document.getElementById("eraser").onclick = () => color = "#ffffff";
+  document.getElementById("clear").onclick = () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     saveState();
   };
 
-  document.getElementById("undo").onclick = ()=>{
-    if(undoStack.length > 0){
+  document.getElementById("undo").onclick = () => {
+    if (undoStack.length > 0) {
       redoStack.push(canvas.toDataURL());
       const last = undoStack.pop();
       loadState(last);
-      socket.send(JSON.stringify({type:'state', image:last}));
     }
   };
 
-  document.getElementById("redo").onclick = ()=>{
-    if(redoStack.length > 0){
-      const next = redoStack.pop();
+  document.getElementById("redo").onclick = () => {
+    if (redoStack.length > 0) {
       undoStack.push(canvas.toDataURL());
+      const next = redoStack.pop();
       loadState(next);
-      socket.send(JSON.stringify({type:'state', image:next}));
     }
   };
 
-  document.getElementById("save").onclick = ()=>{
-    const link=document.createElement("a");
-    link.download="whiteboard.png";
-    link.href=canvas.toDataURL();
+  document.getElementById("save").onclick = () => {
+    const link = document.createElement("a");
+    link.download = "whiteboard.png";
+    link.href = canvas.toDataURL();
     link.click();
   };
 
-  function saveState(){
-    redoStack = [];
-    undoStack.push(canvas.toDataURL());
-    if(undoStack.length > 20) undoStack.shift();
-  }
+  // Chat System (Local only)
+  const chatInput = document.getElementById("chatInput");
+  const chatMessages = document.getElementById("chatMessages");
 
-  function loadState(imageData){
-    const img = new Image();
-    img.onload = ()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0); };
-    img.src = imageData;
-  }
-
-  // Chat
-  document.getElementById("sendChat").onclick=sendMessage;
-  document.getElementById("chatInput").addEventListener("keypress", e=>{
-    if(e.key==="Enter") sendMessage();
-  });
-  function sendMessage(){
-    const msg=document.getElementById("chatInput").value.trim();
-    if(!msg) return;
-    socket.send(JSON.stringify({type:'chat', user:username, message:msg, avatar:avatar}));
-    document.getElementById("chatInput").value="";
-  }
-
-  function addChat(av,u,m){
-    const chat=document.getElementById("chatMessages");
-    const div=document.createElement("div");
-    div.className="chatMessage";
-    div.innerHTML=`<span class="avatar">${av}</span><b>${u}:</b> ${m}`;
-    chat.appendChild(div);
-    chat.scrollTop=chat.scrollHeight;
-  }
-
-  // Avatar select
-  document.querySelectorAll("#avatarSelection span").forEach(span=>{
-    span.onclick=()=>{
-      document.querySelectorAll("#avatarSelection span").forEach(i=>i.classList.remove("selected"));
-      span.classList.add("selected");
-      selectedAvatar=span.dataset.avatar;
-    };
+  document.getElementById("sendChat").onclick = sendMessage;
+  chatInput.addEventListener("keypress", e => {
+    if (e.key === "Enter") sendMessage();
   });
 
-  // Enter room
-  document.getElementById("enterRoom").onclick=()=>{
-    const uname=document.getElementById("usernameInput").value.trim();
-    if(!uname || !selectedAvatar){alert("Select avatar & enter name!"); return;}
-    username=uname; avatar=selectedAvatar;
-    document.getElementById("modal").style.display="none";
-    document.getElementById("main").style.display="flex";
-  };
+  function sendMessage() {
+    const msg = chatInput.value.trim();
+    if (!msg) return;
+    const div = document.createElement("div");
+    div.className = "chatMessage";
+    div.textContent = "You: " + msg;
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    chatInput.value = "";
+  }
+
+  // Initial save state
+  saveState();
 });
 </script>
 </body>
