@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, maximum-scale=1.0, user-scalable=no">
 <title>Realtime Whiteboard + Chat</title>
 <style>
   * { box-sizing: border-box; }
@@ -125,43 +125,58 @@
     font-size: 22px;
     margin-right: 6px;
   }
+
+  /* ✅ Fixed Chat Input Container */
   #chatInputContainer {
     display: flex;
+    align-items: center;
     padding: 10px;
     background: #fff;
     border-top: 1px solid #ccc;
     position: sticky;
     bottom: 0;
   }
+
   #chatInput {
     flex: 1;
+    min-width: 0; /* fixes overflow issue */
     padding: 8px 10px;
     border-radius: 8px;
     border: 1px solid #ccc;
     font-size: 16px;
   }
+
   #sendChat {
+    flex-shrink: 0; /* prevent disappearing */
     background: #007bff;
     color: white;
     border: none;
     border-radius: 8px;
-    padding: 8px 16px;
+    padding: 8px 14px;
     margin-left: 6px;
     cursor: pointer;
+    font-size: 16px;
   }
   #sendChat:hover { background: #0056b3; }
 
   /* Mobile styles */
   @media (max-width: 768px) {
-    #main {
-      flex-direction: column;
-    }
+    #main { flex-direction: column; }
     #chatContainer {
       height: 40vh;
       margin-top: 10px;
     }
-    canvas {
-      max-height: 50vh;
+    canvas { max-height: 50vh; }
+
+    #chatInputContainer {
+      padding: 8px;
+    }
+    #chatInput {
+      font-size: 15px;
+    }
+    #sendChat {
+      padding: 8px 12px;
+      font-size: 15px;
     }
   }
 </style>
