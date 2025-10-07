@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Realtime Whiteboard + Chat</title>
+<style>
+  body, html {
+    margin: 0; padding: 0;
+    font-family: Arial, sans-serif;
+    background: #f0f4f8;
+    height: 100%;
+  }
+
+  /* Modal for login */
+  #modal {
+    position: fixed; top:0; left:0;
+    width:100%; height:100%;
+    background: rgba(0,0,0,0.6);
+    display:flex; justify-content:center; align-items:center;
+  }
+  #modalContent {
+    background:#fff; padding:20px; border-radius:12px;
+    text-align:center; width:320px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  }
+  #avatarSelection span {
+    font-size:36px; margin:5px; cursor:pointer;
+    border:2px solid transparent; border-radius:6px; padding:5px;
+    transition: all 0.2s;
+  }
+  #avatarSelection span:hover { transform: scale(1.2); }
+  #avatarSelection span.selected { border-color:#007bff; }
+
+  /* Main layout */
+  #main { display:none; flex-direction: row; padding:10px; height:100vh; box-sizing:border-box; }
+
+  #canvasContainer {
+    flex:3; display:flex; flex-direction:column; align-items:center;
+  }
+  canvas {
+    border:2px solid #222; cursor:crosshair; background:#fff; border-radius:8px;
+  }
+  #controls { margin-bottom:10px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+
+  #chatContainer {
+    flex:1; display:flex; flex-direction:column; margin-left:12px;
+    background:#fff; border:2px solid #222; border-radius:10px; height:100%;
+  }
+  #chatMessages { flex:1; overflow-y:auto; padding:10px; }
+  .chatMessage { display:flex; align-items:center; margin-bottom:5px; background:#e0e7ff; border-radius:12px; padding:5px 10px; }
+  .chatMessage span.avatar { font-size:24px; margin-right:8px; }
+
+  #chatInputContainer { display:flex; padding:10px; border-top:1px solid #ccc; }
+  #chatInput { flex:1; padding:5px 10px; border-radius:6px; border:1px solid #ccc; }
+  #sendChat { padding:5px 12px; margin-left:5px; border:none; background:#007bff; color:white; border-radius:6px; cursor:pointer; transition:0.2s; }
+  #sendChat:hover { background:#0056b3; }
+
+</style>
+</head>
+<body>
+
+<!-- Modal -->
+<div id="modal">
+  <div id="modalContent">
+    <h3>Select Avatar</h3>
+    <div id="avatarSelection">
+      <span data-avatar="😀">😀</span>
+      <span data-avatar="😎">😎</span>
+      <span data-avatar="🥰">🥰</span>
+      <span data-avatar="🤖">🤖</span>
+    </div>
+    <input type="text" id="usernameInput" placeholder="Enter your name" style="margin-top:10px;"><br><br>
+    <button id="enterRoom">Enter Room</button>
+  </div>
+</div>
+
+<div id="main">
+  <div id="canvasContainer">
+    <div id="controls">
+      Color: <input type="color" id="colorPicker" value="#000000">
+      Width: <input type="range" id="lineWidth" min="1" max="10" value="2">
+      <button id="eraser">Eraser</button>
+      <button id="clear">Clear</button>
+      <button id="save">Save as PNG</button>
+    </div>
+    <canvas id="board" width="800" height="600"></canvas>
+  </div>
+
+  <div id="chatContainer">
+    <div id="chatMessages"></div>
+    <div id="chatInputContainer">
+      <input type="text" id="chatInput" placeholder="Type a message">
+      <button id="sendChat">Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", ()=>{
+  let drawing=false, current={}, color="#000", lineWidth=2;
+  let username="", avatar="", selectedAvatar=null;
+  const canvas=document.getElementById("board");
+  const ctx=canvas.getContext("2d");
+  const chatInput=document.getElementById("chatInput");
+
+ const socket = new WebSocket(
+    (window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.host + "/ws/whiteboard/"
+);
+
+
+  socket.onmessage=(e)=>{
+    const data=JSON.parse(e.data);
+    if(data.type==="draw"){
+      const w=canvas.width,h=canvas.height;
+      drawLine(data.x0*w,data.y0*h,data.x1*w,data.y1*h,false,data.color,data.lineWidth);
+    }
+    if(data.type==="chat"){
+      const {user,message,avatar:av}=data;
+      const chatMessages=document.getElementById("chatMessages");
+      const div=document.createElement("div");
+      div.className="chatMessage";
+      div.innerHTML=`<span class="avatar">${av}</span> <b>${user}:</b> ${message}`;
+      chatMessages.appendChild(div);
+      chatMessages.scrollTop=chatMessages.scrollHeight;
+    }
+  };
+
+  function drawLine(x0,y0,x1,y1,emit,strokeColor=color,strokeWidth=lineWidth){
+    ctx.beginPath();
+    ctx.moveTo(x0,y0);
+    ctx.lineTo(x1,y1);
+    ctx.strokeStyle=strokeColor;
+    ctx.lineWidth=strokeWidth;
+    ctx.stroke();
+    ctx.closePath();
+    if(!emit) return;
+    const w=canvas.width,h=canvas.height;
+    socket.send(JSON.stringify({type:'draw', x0:x0/w, y0:y0/h, x1:x1/w, y1:y1/h, color:strokeColor, lineWidth:strokeWidth}));
+  }
+
+  // Mouse events
+  canvas.addEventListener("mousedown", e=>{drawing=true; current.x=e.offsetX; current.y=e.offsetY;});
+  canvas.addEventListener("mouseup", e=>drawing=false);
+  canvas.addEventListener("mousemove", e=>{
+    if(!drawing) return;
+    drawLine(current.x,current.y,e.offsetX,e.offsetY,true);
+    current.x=e.offsetX; current.y=e.offsetY;
+  });
+
+  // Touch events
+  canvas.addEventListener("touchstart", e=>{
+    e.preventDefault(); const touch=e.touches[0]; const rect=canvas.getBoundingClientRect();
+    current.x=touch.clientX-rect.left; current.y=touch.clientY-rect.top; drawing=true;
+  });
+  canvas.addEventListener("touchmove", e=>{
+    e.preventDefault(); const touch=e.touches[0]; const rect=canvas.getBoundingClientRect();
+    const x=touch.clientX-rect.left, y=touch.clientY-rect.top;
+    drawLine(current.x,current.y,x,y,true);
+    current.x=x; current.y=y;
+  });
+  canvas.addEventListener("touchend", e=>drawing=false);
+
+  // Controls
+  document.getElementById("colorPicker").onchange = e=>color=e.target.value;
+  document.getElementById("lineWidth").oninput = e=>lineWidth=e.target.value;
+  document.getElementById("eraser").onclick = ()=>color="#fff";
+  document.getElementById("clear").onclick = ()=>{
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    socket.send(JSON.stringify({type:'draw', x0:0,y0:0,x1:0,y1:0,color:'#fff',lineWidth:canvas.width}));
+  };
+  document.getElementById("save").onclick = ()=>{
+    const link=document.createElement("a");
+    link.download="whiteboard.png";
+    link.href=canvas.toDataURL();
+    link.click();
+  };
+
+  // Chat send
+  document.getElementById("sendChat").onclick=sendMessage;
+  chatInput.addEventListener("keypress", e=>{
+    if(e.key==="Enter") sendMessage();
+  });
+  function sendMessage(){
+    const msg=chatInput.value.trim();
+    if(!msg) return;
+    socket.send(JSON.stringify({type:'chat', user:username, message:msg, avatar:avatar}));
+    chatInput.value="";
+  }
+
+  // Avatar selection
+  document.querySelectorAll("#avatarSelection span").forEach(span=>{
+    span.onclick=()=>{
+      document.querySelectorAll("#avatarSelection span").forEach(i=>i.classList.remove("selected"));
+      span.classList.add("selected");
+      selectedAvatar=span.dataset.avatar;
+    };
+  });
+
+  // Enter room
+  document.getElementById("enterRoom").onclick=()=>{
+    const uname=document.getElementById("usernameInput").value.trim();
+    if(!uname || !selectedAvatar){alert("Select avatar & enter name!"); return;}
+    username=uname; avatar=selectedAvatar;
+    document.getElementById("modal").style.display="none";
+    document.getElementById("main").style.display="flex";
+  };
+});
+</script>
+</body>
+</html>
