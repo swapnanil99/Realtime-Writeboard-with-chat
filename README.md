@@ -1,7 +1,7 @@
 # 💬 Real-Time Writeboard with chat (Django Channels)
 
 A **real-time writeboard with chat application** built using **Django**, **Django Channels**, and **WebSockets**.  
-It allows users to send and receive messages instantly without refreshing the page.  
+It allows users to send and receive messages instantly and real time drawing without refreshing the page.  
 This project demonstrates the power of **asynchronous communication** in Django.
 
 🚀 **Live Demo:** [Click here to try it!](https://realtime-writeboard-with-chat.onrender.com)
