@@ -26,7 +26,6 @@ This project demonstrates the power of **asynchronous communication** in Django.
 | Frontend | HTML, CSS, JavaScript |
 | Communication | WebSockets |
 | Channel Layer | Redis  |
-| Server | ASGI (Daphne) |
 
 ---
 
