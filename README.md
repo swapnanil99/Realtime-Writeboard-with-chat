@@ -5,7 +5,6 @@ It allows users to send and receive messages instantly and real time drawing wit
 This project demonstrates the power of **asynchronous communication** in Django.
 
 🚀 **Live Demo:** [Click here to try it!](https://realtime-writeboard-with-chat.onrender.com)
----
 
 ## 🚀 Features
 
@@ -16,8 +15,6 @@ This project demonstrates the power of **asynchronous communication** in Django.
 - Instant updates without page reload
 - Simple and clean UI 
 
----
-
 ## 🛠️ Tech Stack
 
 | Component | Technology |
@@ -26,6 +23,3 @@ This project demonstrates the power of **asynchronous communication** in Django.
 | Frontend | HTML, CSS, JavaScript |
 | Communication | WebSockets |
 | Channel Layer | Redis  |
-
----
-
